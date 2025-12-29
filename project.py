@@ -19,7 +19,7 @@ anamoly = pd.read_csv("/workspaces/Gladiators/.venv/anomaly_scores.csv")
 tran_data = pd.read_csv("/workspaces/Gladiators/.venv/transaction_metadata.csv")
 tran_rec = pd.read_csv("/workspaces/Gladiators/.venv/transaction_records.csv")
 
-data = [account,customer,fraud,suspision,merchant,tran_cat,amount,anamoly,tran_data,tran_rec]
+data = [account, customer, fraud, suspision, merchant, tran_cat, amount, anamoly, tran_data, tran_rec]
 for df in data:
     print(df.head())
 
