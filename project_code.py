@@ -147,12 +147,3 @@ y = data_final['FraudIndicator']
 # Split into training and testing sets (Stratified to keep ratio)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
 
-# Initialize SMOTE
-smote = SMOTE(random_state=42)
-
-# Resample only the training data
-X_train_balanced, y_train_balanced = smote.fit_resample(X_train, y_train)
-
-print(f"Original training shape: {y_train.value_counts()}")
-print(f"Balanced training shape: {y_train_balanced.value_counts()}")
-
