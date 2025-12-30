@@ -205,7 +205,7 @@ import matplotlib.pyplot as plt
 from imblearn.over_sampling import SMOTE
 from collections import Counter
 
-#--------------------SMOTE ANALYSIS--------------------------------------
+
 # Initialize SMOTE for oversampling
 smote = SMOTE(random_state=42)
 
@@ -261,46 +261,37 @@ X_resampled, y_resampled = shuffle(X_resampled, y_resampled, random_state=42)
 # Split data into train and test sets (keep the test set separate for evaluation)
 X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.3, random_state=42)
 
-# Initialize the model
-model = DecisionTreeClassifier()
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
 
-# Define the hyperparameters grid for tuning
-param_grid = {
-    'max_depth': [None, 10, 25, 50,100,250],  # Maximum depth of the tree
-    'min_samples_split': [2, 10, 50,100,250],  # Minimum number of samples required to split an internal node
-    'min_samples_leaf': [1, 10, 30,75,100],    # Minimum number of samples required to be at a leaf node
-    'criterion': ['gini', 'entropy'] # Criterion to measure the quality of a split
-}
+# 1. Initialize the Random Forest Classifier
+# We use 100 trees (n_estimators) and a fixed random_state for reproducibility
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
 
-# Initialize GridSearchCV for hyperparameter tuning
-grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, scoring='accuracy', n_jobs=-1, verbose=1)
+# 2. Train the model on the resampled (balanced) training data
+rf_model.fit(X_train, y_train)
 
-# Perform the grid search to find the best hyperparameters
-grid_search.fit(X_train, y_train)
+# 3. Make predictions on the test data
+y_pred_rf = rf_model.predict(X_test)
 
-# Best parameters found by GridSearchCV
-print("Best Hyperparameters:", grid_search.best_params_)
+# 4. Evaluate the model performance
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+precision_rf = precision_score(y_test, y_pred_rf)
+recall_rf = recall_score(y_test, y_pred_rf)
+f1_rf = f1_score(y_test, y_pred_rf)
+conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
 
-# Train the model using the best hyperparameters
-best_model = grid_search.best_estimator_
-
-# Make predictions on the test data
-y_pred = best_model.predict(X_test)
-
-# Calculate and print various metrics to evaluate the model's performance
-accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred)
-recall = recall_score(y_test, y_pred)
-f1 = f1_score(y_test, y_pred)
-confusion = confusion_matrix(y_test, y_pred)
-
-print("Model Evaluation Metrics:")
-print("Accuracy:", accuracy)
-print("Precision:", precision)
-print("Recall:", recall)
-print("F1 Score:", f1)
+print("Random Forest Model Evaluation Metrics:")
+print("Accuracy:",accuracy_rf)
+print("Precision:", precision_rf)
+print("Recall:",recall_rf)
+print("F1 Score:", f1_rf)
 print("Confusion Matrix:")
-print(confusion)
+print(conf_matrix_rf)
+
+# Detailed Classification Report
+print("Detailed Classification Report:")
+print(classification_report(y_test, y_pred_rf))
 
 
 # Inference on new/unseen data (for example, use a separate unseen dataset or a specific test sample)
@@ -308,7 +299,7 @@ print(confusion)
 unseen_sample = X_test.iloc[59].values.reshape(1, -1)  # Reshaping for a single sample
 
 # Predict the label for the unseen sample
-inference_prediction = best_model.predict(unseen_sample)
+inference_prediction = rf_model.predict(unseen_sample)
 
 # Map prediction result to 'fraud' or 'not fraud'
 fraud_status = "Fraud" if inference_prediction[0] == 1 else "Not Fraud"
