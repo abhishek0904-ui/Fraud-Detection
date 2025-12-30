@@ -119,7 +119,30 @@ plt.title('Correlation Heatmap for Numeric Columns')
 plt.show()
 
 # Dropping the columns as of now they are not mush corelated & also wouldn't damper the performance of model
+from sklearn.model_selection import cross_val_score
 
+#------------------COLLUSION------------------
+
+# Create unique Link ID between Customer and Merchant
+data['Link_ID'] = data['CustomerID'].astype(str) + "_" + data['MerchantID'].astype(str)
+
+# Feature 1: How often do these two transact?
+data['Transaction_Frequency'] = data.groupby('Link_ID')['TransactionAmount'].transform('count')
+
+# Feature 2: What is the total volume of money moving between them?
+data['Total_Linked_Value'] = data.groupby('Link_ID')['TransactionAmount'].transform('sum')
+
+
+#---------------Benford's Law Application-----------------
+
+# Extract leading digit and map to Benford Probability
+def get_first_digit(amount):
+    s = str(abs(amount)).replace('.', '').lstrip('0')
+    return int(s[0]) if s else 0
+
+data['First_Digit'] = data['TransactionAmount'].apply(get_first_digit)
+benford_dist = {d: np.log10(1 + 1/d) for d in range(1, 10)}
+data['Benford_Prob'] = data['First_Digit'].map(benford_dist).fillna(0)
 columns_to_be_dropped = ['TransactionID','MerchantID','CustomerID','Name', 'Age', 'Address']
 
 data1 = data.drop(columns_to_be_dropped, axis=1)
@@ -247,28 +270,47 @@ rf_model.fit(X_train, y_train)
 y_pred_rf = rf_model.predict(X_test)
 
 # 4. Evaluate the model performance
-accuracy_rf = accuracy_score(y_test, y_pred_rf)
-precision_rf = precision_score(y_test, y_pred_rf)
-recall_rf = recall_score(y_test, y_pred_rf)
-f1_rf = f1_score(y_test, y_pred_rf)
-conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
+# accuracy_rf = accuracy_score(y_test, y_pred_rf)
+# precision_rf = precision_score(y_test, y_pred_rf)
+# recall_rf = recall_score(y_test, y_pred_rf)
+# f1_rf = f1_score(y_test, y_pred_rf)
+# conf_matrix_rf = confusion_matrix(y_test, y_pred_rf)
 
-print("Random Forest Model Evaluation Metrics:")
-print("Accuracy:",accuracy_rf)
-print("Precision:", precision_rf)
-print("Recall:",recall_rf)
-print("F1 Score:", f1_rf)
-print("Confusion Matrix:")
-print(conf_matrix_rf)
+# print("Random Forest Model Evaluation Metrics:")
+# print("Accuracy:",accuracy_rf)
+# print("Precision:", precision_rf)
+# print("Recall:",recall_rf)
+# print("F1 Score:", f1_rf)
+# print("Confusion Matrix:")
+# print(conf_matrix_rf)
 
-# Detailed Classification Report
-print("Detailed Classification Report:")
-print(classification_report(y_test, y_pred_rf))
+# # Detailed Classification Report
+# print("Detailed Classification Report:")
+# print(classification_report(y_test, y_pred_rf))
+
+#----------- Cross-Validation to assess model stability----------------
+
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+import numpy as np
+
+# 1. Define the Cross-Validation strategy
+# We use StratifiedKFold to ensure each fold has a balanced percentage of fraud
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+# 2. Calculate Cross-Validation scores for 'Recall' 
+recall_scores = cross_val_score(rf_model, X_resampled, y_resampled, cv=skf, scoring='recall')
+
+# 3. Calculate Cross-Validation scores for 'Accuracy'
+accuracy_scores = cross_val_score(rf_model, X_resampled, y_resampled, cv=skf, scoring='accuracy')
+
+print("--- Cross-Validation Results (5-Folds) ---")
+print(f"Average Recall: {np.mean(recall_scores):.4f} (+/- {np.std(recall_scores):.4f})")
+print(f"Average Accuracy: {np.mean(accuracy_scores):.4f} (+/- {np.std(accuracy_scores):.4f})")
+
 
 
 # Inference on new/unseen data (for example, use a separate unseen dataset or a specific test sample)
-# Here we simulate it by using the first row from the X_test
-unseen_sample = X_test.iloc[59].values.reshape(1, -1)  # Reshaping for a single sample
+unseen_sample = X_test.iloc[69].values.reshape(1, -1)  # Reshaping for a single sample
 
 # Predict the label for the unseen sample
 inference_prediction = rf_model.predict(unseen_sample)
