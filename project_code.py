@@ -189,23 +189,21 @@ print(X_train.shape, Y_test.shape)
 
 # Logistic Regression model
 
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+# from sklearn.tree import DecisionTreeClassifier
+# from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
-# Create a logistic regression model
-model = DecisionTreeClassifier()
+# # Create a logistic regression model
+# model = DecisionTreeClassifier()
 
-# Train the model on the training data
-model.fit(X_train, Y_train)
+# # Train the model on the training data
+# model.fit(X_train, Y_train)
 
-# Make predictions on the testing data
-y_pred = model.predict(X_test)
+# # Make predictions on the testing data
+# y_pred = model.predict(X_test)
 
-# Calculate the accuracy of the model
-accuracy = accuracy_score(Y_test, y_pred)
-print("Accuracy:", accuracy)
-
-#High accuracy is not often a good thing in a machine learning model as it states the problem of imbalanced dataset
+# # Calculate the accuracy of the model
+# accuracy = accuracy_score(Y_test, y_pred)
+# print("Accuracy:", accuracy)
 
 import seaborn as sns
 import matplotlib.pyplot as plt
