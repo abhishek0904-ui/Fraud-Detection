@@ -118,6 +118,9 @@ plt.title('Correlation Heatmap for Numeric Columns')
 
 plt.show()
 
+# Dropping the columns as of now they are not mush corelated & also wouldn't damper the performance of model
+from sklearn.model_selection import cross_val_score
+
 #------------------COLLUSION------------------
 
 # Create unique Link ID between Customer and Merchant
@@ -202,8 +205,13 @@ print(X_train.shape, Y_test.shape)
 # accuracy = accuracy_score(Y_test, y_pred)
 # print("Accuracy:", accuracy)
 
+# #High accuracy is not often a good thing in a machine learning model as it states the problem of imbalanced dataset
+
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+# Assuming you have a DataFrame 'df' with a 'FraudIndicator' column
+# Load your data into the DataFrame if not already done
 
 # Create a count plot for the 'FraudIndicator' column
 plt.figure(figsize=(8, 6))  # Optional: Adjust the figure size
@@ -221,7 +229,7 @@ from imblearn.over_sampling import SMOTE
 from collections import Counter
 
 
-#--------------- Using SMOTE for oversampling------------------
+# Initialize SMOTE for oversampling
 smote = SMOTE(random_state=42)
 
 # Apply SMOTE to the data
@@ -242,10 +250,10 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.utils import shuffle
 
-# Shuffle the dataset to introduce slight randomness 
+# Shuffle the dataset to introduce slight randomness (you can adjust the `random_state` for different outcomes)
 X_resampled, y_resampled = shuffle(X_resampled, y_resampled, random_state=42)
 
-# Split data into train and test sets
+# Split data into train and test sets (keep the test set separate for evaluation)
 X_train, X_test, y_train, y_test = train_test_split(X_resampled, y_resampled, test_size=0.3, random_state=42)
 
 from sklearn.ensemble import RandomForestClassifier
@@ -299,8 +307,23 @@ print("--- Cross-Validation Results (5-Folds) ---")
 print(f"Average Recall: {np.mean(recall_scores):.4f} (+/- {np.std(recall_scores):.4f})")
 print(f"Average Accuracy: {np.mean(accuracy_scores):.4f} (+/- {np.std(accuracy_scores):.4f})")
 
+import joblib
+
+
+# 'rf_model' is the variable name from your Random Forest training code
+joblib.dump(rf_model, 'fraud_model.pkl')
+
+# The backend needs this to translate new data exactly the same way.
+joblib.dump(label_encoder, 'category_encoder.pkl')
+
+# This saves the exact list of columns your model expects (e.g., 'Hour', 'gap', 'Amount')
+model_columns = X.columns.tolist()
+joblib.dump(model_columns, 'model_features.pkl')
+
+print("Success! Files 'fraud_model.pkl', 'category_encoder.pkl', and 'model_features.pkl' are ready for the backend.")
 # Inference on new/unseen data (for example, use a separate unseen dataset or a specific test sample)
-unseen_sample = X_test.iloc[59].values.reshape(1, -1)  # Reshaping for a single sample
+# Here we simulate it by using the first row from the X_test
+unseen_sample = X_test.iloc[69].values.reshape(1, -1)  # Reshaping for a single sample
 
 # Predict the label for the unseen sample
 inference_prediction = rf_model.predict(unseen_sample)
