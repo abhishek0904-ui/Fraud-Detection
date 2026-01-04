@@ -119,7 +119,6 @@ plt.title('Correlation Heatmap for Numeric Columns')
 plt.show()
 
 # Dropping the columns as of now they are not mush corelated & also wouldn't damper the performance of model
-from sklearn.model_selection import cross_val_score
 
 #------------------COLLUSION------------------
 
@@ -152,40 +151,75 @@ print(data1['FraudIndicator'].value_counts(), data1['SuspiciousFlag'].value_coun
 
 #--------------------------FEATURE ENGINEERING-------------------------
 
-# Using Feature Engineering Creating two Columns
-# Hour of Transaction = hour
-# Gap between the day of transaction and last login in days = gap
-if pd.api.types.is_datetime64_any_dtype(data['Timestamp']):
-    print("The 'Timestamp' column is already in datetime format.")
-else:
-    print("The 'Timestamp' column is not in datetime format.")
-
-data1['Timestamp1'] = pd.to_datetime(data1['Timestamp'])
-
-print(data1.dtypes)
-data1['Hour'] = data1['Timestamp1'].dt.hour
+# 1. Convert columns to datetime in 'data1' directly
+data1['Timestamp'] = pd.to_datetime(data1['Timestamp'])
 data1['LastLogin'] = pd.to_datetime(data1['LastLogin'])
-data1['gap'] = (data1['Timestamp1'] - data1['LastLogin']).dt.days.abs()
+
+# 2. Create Time-based features on 'data1'
+data1['Hour'] = data1['Timestamp'].dt.hour
+data1['gap'] = (data1['Timestamp'] - data1['LastLogin']).dt.days.abs()
+
+# 3. Create Amount-based features on 'data1'
+# Returns 1 if it's a suspicious "clean" number, 0 otherwise
+data1['Is_Round_Amount'] = data1['TransactionAmount'].apply(lambda x: 1 if x % 100 == 0 or x % 500 == 0 else 0)
+
+# 4. Day of Week features
+# 0=Monday, 6=Sunday
+data1['DayOfWeek'] = data1['Timestamp'].dt.dayofweek
+
+# Flag transactions happening on weekends (Saturday=5, Sunday=6)
+data1['Is_Weekend'] = data1['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+
+# Flag "Graveyard Shift" (Transactions between 1 AM and 5 AM)
+data1['Is_Night_Trans'] = data1['Hour'].apply(lambda x: 1 if 1 <= x <= 5 else 0)
+
+# 5. Advanced Profile Features
+# Calculate the average transaction amount for this specific Customer (using transform so it stays aligned)
+
+
+# RE-DOING DATA1 CREATION to preserve IDs for feature engineering, then drop them later.
+columns_to_drop_final = ['TransactionID','MerchantID','CustomerID','Name', 'Age', 'Address', 'Timestamp', 'LastLogin']
+
+# Re-calculate these on the main dataframe 'data' FIRST, before creating 'data1'
+data['Timestamp'] = pd.to_datetime(data['Timestamp'])
+data['LastLogin'] = pd.to_datetime(data['LastLogin'])
+data['Hour'] = data['Timestamp'].dt.hour
+data['gap'] = (data['Timestamp'] - data['LastLogin']).dt.days.abs()
+data['Is_Round_Amount'] = data['TransactionAmount'].apply(lambda x: 1 if x % 100 == 0 or x % 500 == 0 else 0)
+data['DayOfWeek'] = data['Timestamp'].dt.dayofweek
+data['Is_Weekend'] = data['DayOfWeek'].apply(lambda x: 1 if x >= 5 else 0)
+data['Is_Night_Trans'] = data['Hour'].apply(lambda x: 1 if 1 <= x <= 5 else 0)
+data['Cust_Avg_Amount'] = data.groupby('CustomerID')['TransactionAmount'].transform('mean')
+data['High_Value_Spike'] = (data['TransactionAmount'] > 5 * data['Cust_Avg_Amount']).astype(int)
+data['Weekend_Spike'] = data['High_Value_Spike'] * data['Is_Weekend']
+
+# We drop 'Timestamp' and 'LastLogin' here because we already extracted features from them
+data1 = data.drop(columns_to_drop_final, axis=1)
 
 print(data1.head())
 
 #------------------DATA MODELLING----------------------------------
-X = data1.drop(['FraudIndicator','Timestamp','Timestamp1','LastLogin'],axis=1)
+
+# Separate Target and Features
+X = data1.drop(['FraudIndicator'], axis=1) # Timestamp/LastLogin were already dropped above
 Y = data1['FraudIndicator']
 
-
 from sklearn.preprocessing import LabelEncoder
-# Create an instance of LabelEncoder
 label_encoder = LabelEncoder()
 
-# Fit and transform the 'Category' column
+X['Category'] = X['Category'].astype(str)
 X['Category'] = label_encoder.fit_transform(X['Category'])
-print(X)
+
+# Handle NaNs if any were created (e.g., by shift or map)
+X = X.fillna(0)
+
+print("Features in X:", X.columns) 
 
 from sklearn.model_selection import train_test_split
-X_train, X_test, Y_train, Y_test = train_test_split(X,Y,test_size=0.2)
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
 print(X_train.shape, Y_test.shape)
+
 
 # Logistic Regression model
 
